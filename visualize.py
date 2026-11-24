@@ -1,18 +1,31 @@
 import csv
 import os
 from collections import defaultdict
+from typing import Dict, Optional
 import matplotlib.pyplot as plt
 
-CSV_PATH = os.path.join("data", "expenses.csv")
+CSV_CANDIDATES = ["expenses.csv", os.path.join("data", "expenses.csv")]
 CHART_PATH = "sample_piechart.png"
 
 
-def load_category_summary(csv_path: str = CSV_PATH) -> dict[str, float]:
-    if not os.path.exists(csv_path):
+def resolve_csv_path(csv_path: Optional[str] = None) -> str:
+    if csv_path:
+        if os.path.exists(csv_path):
+            return csv_path
         raise FileNotFoundError(f"找不到支出資料檔：{csv_path}")
 
-    summary: dict[str, float] = defaultdict(float)
-    with open(csv_path, mode="r", encoding="utf-8") as file:
+    for candidate in CSV_CANDIDATES:
+        if os.path.exists(candidate):
+            return candidate
+
+    raise FileNotFoundError("找不到支出資料檔：已檢查 expenses.csv 與 data/expenses.csv。")
+
+
+def load_category_summary(csv_path: Optional[str] = None) -> Dict[str, float]:
+    target_path = resolve_csv_path(csv_path)
+
+    summary: Dict[str, float] = defaultdict(float)
+    with open(target_path, mode="r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
             category = (row.get("category") or "Uncategorized").strip()
@@ -28,10 +41,10 @@ def load_category_summary(csv_path: str = CSV_PATH) -> dict[str, float]:
 
 
 def create_pie_chart(
-    csv_path: str = CSV_PATH,
+    csv_path: Optional[str] = None,
     output_path: str = CHART_PATH,
     show_chart: bool = True,
-) -> dict[str, float]:
+) -> Dict[str, float]:
     summary = load_category_summary(csv_path)
     if not summary:
         raise ValueError("目前沒有可繪製的支出資料。")
